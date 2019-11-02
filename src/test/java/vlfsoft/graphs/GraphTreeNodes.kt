@@ -6,6 +6,8 @@ interface HasBreadthFirstSearchA<T, TNode : GraphNode<T, TNode>> {
 
     fun find_usingBFS(value: T): TNode?
 
+    val strategyName: String
+
 }
 
 /**
@@ -29,7 +31,7 @@ interface NeighborsMutableCollectionStrategyA<T, TNode : GraphNode<T, TNode>> {
 
 sealed class NeighborsMutableCollectionStandardStrategy<T, TNode : GraphNode<T, TNode>> : NeighborsMutableCollectionStrategyA<T, TNode> {
 
-    class NotOrdered<T, TNode : GraphNode<T, TNode>>() : NeighborsMutableCollectionStandardStrategy<T, TNode>() {
+    class NotOrdered<T, TNode : GraphNode<T, TNode>> : NeighborsMutableCollectionStandardStrategy<T, TNode>() {
         override val neighborsMutableCollection get() = hashSetOf<TNode>()
 
         override fun ArrayDeque<TNode>.addAllCurrentNodeNeighborsOrder(currentNodeNeighbors: Collection<TNode>) {
@@ -37,7 +39,7 @@ sealed class NeighborsMutableCollectionStandardStrategy<T, TNode : GraphNode<T, 
         }
     }
 
-    class LeftToRightOrdered<T, TNode : GraphNode<T, TNode>>() : NeighborsMutableCollectionStandardStrategy<T, TNode>() {
+    class LeftToRightOrdered<T, TNode : GraphNode<T, TNode>> : NeighborsMutableCollectionStandardStrategy<T, TNode>() {
         override val neighborsMutableCollection get() = mutableSetOf<TNode>()
 
         override fun ArrayDeque<TNode>.addAllCurrentNodeNeighborsOrder(currentNodeNeighbors: Collection<TNode>) {
@@ -45,7 +47,7 @@ sealed class NeighborsMutableCollectionStandardStrategy<T, TNode : GraphNode<T, 
         }
     }
 
-    class RightToLeftOrdered<T, TNode : GraphNode<T, TNode>>() : NeighborsMutableCollectionStandardStrategy<T, TNode>() {
+    class RightToLeftOrdered<T, TNode : GraphNode<T, TNode>> : NeighborsMutableCollectionStandardStrategy<T, TNode>() {
         override val neighborsMutableCollection get() = mutableSetOf<TNode>()
 
         override fun ArrayDeque<TNode>.addAllCurrentNodeNeighborsOrder(currentNodeNeighbors: Collection<TNode>) {
@@ -97,6 +99,9 @@ sealed class GraphNode<T, TNode : GraphNode<T, TNode>>(
         return null
     }
 
+    override val strategyName: String
+        get() = neighborsMutableCollectionStrategy.javaClass.kotlin.simpleName!!
+
 }
 
 class Tree<T>(override val value: T, neighborsMutableCollectionStrategy: NeighborsMutableCollectionStrategyA<T, Tree<T>>) : GraphNode<T, Tree<T>>(neighborsMutableCollectionStrategy) {
@@ -117,20 +122,6 @@ class Tree<T>(override val value: T, neighborsMutableCollectionStrategy: Neighbo
     override fun MutableSet<Tree<T>>.addCurrentNode(node: Tree<T>) {}
     override fun ArrayDeque<Tree<T>>.removeAlreadyVisitedSet(alreadyVisitedSet: Set<Tree<T>>) {}
 
-    companion object {
-
-        // GOF.FactoryMethods
-
-        @JvmStatic
-        fun <T> withNotOrderedChildren(value: T) = Tree(value, NeighborsMutableCollectionStandardStrategy.NotOrdered())
-
-        @JvmStatic
-        fun <T> withLeftToRightOrderedChildren(value: T) = Tree(value, NeighborsMutableCollectionStandardStrategy.LeftToRightOrdered())
-
-        @JvmStatic
-        fun <T> withRightToLeftOrderedChildren(value: T) = Tree(value, NeighborsMutableCollectionStandardStrategy.RightToLeftOrdered())
-
-    }
 }
 
 class Graph<T>(override val value: T, neighborsMutableCollectionStrategy: NeighborsMutableCollectionStrategyA<T, Graph<T>>) : GraphNode<T, Graph<T>>(neighborsMutableCollectionStrategy) {
@@ -155,21 +146,6 @@ class Graph<T>(override val value: T, neighborsMutableCollectionStrategy: Neighb
         removeAll(alreadyVisitedSet)
     }
 
-    companion object {
-
-        // GOF.FactoryMethods
-
-        @JvmStatic
-        fun <T> withNotOrderedNeighbors(value: T) = Graph(value, NeighborsMutableCollectionStandardStrategy.NotOrdered())
-
-        @JvmStatic
-        fun <T> withLeftToRightOrderedNeighbors(value: T) = Graph(value, NeighborsMutableCollectionStandardStrategy.LeftToRightOrdered())
-
-        @JvmStatic
-        fun <T> withRightToLeftOrderedNeighbors(value: T) = Graph(value, NeighborsMutableCollectionStandardStrategy.RightToLeftOrdered())
-
-    }
-
 }
 
 @Target(AnnotationTarget.CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY)
@@ -183,8 +159,15 @@ fun <T> Tree<T>.addChild(value: T, block: Tree<T>.() -> Unit) = addChild(value).
 fun <T> treeOf(root: Tree<T>, block: Tree<T>.() -> Unit): Tree<T> = root.apply { block() }
 
 @GraphNodeDSL
-fun <T> treeWithNotOrderedChildrenOf(value: T, block: Tree<T>.() -> Unit): Tree<T> = treeOf(Tree.withNotOrderedChildren(value), block)
+fun <T> treeWithNotOrderedChildrenOf(value: T, block: Tree<T>.() -> Unit): Tree<T> = treeOf(Tree(value, NeighborsMutableCollectionStandardStrategy.NotOrdered()), block)
 @GraphNodeDSL
-fun <T> treeWithLeftToRightOrderedChildrenOf(value: T, block: Tree<T>.() -> Unit): Tree<T> = treeOf(Tree.withLeftToRightOrderedChildren(value), block)
+fun <T> treeWithLeftToRightOrderedChildrenOf(value: T, block: Tree<T>.() -> Unit): Tree<T> = treeOf(Tree(value, NeighborsMutableCollectionStandardStrategy.LeftToRightOrdered()), block)
 @GraphNodeDSL
-fun <T> treeRightToLeftOrderedChildrenOf(value: T, block: Tree<T>.() -> Unit): Tree<T> = treeOf(Tree.withRightToLeftOrderedChildren(value), block)
+fun <T> treeRightToLeftOrderedChildrenOf(value: T, block: Tree<T>.() -> Unit): Tree<T> = treeOf(Tree(value, NeighborsMutableCollectionStandardStrategy.RightToLeftOrdered()), block)
+
+@GraphNodeDSL
+fun <T> graphWithNotOrderedChildrenOf(initBlock: (NeighborsMutableCollectionStrategyA<Int, Graph<Int>>) -> Graph<T>): Graph<T> = initBlock(NeighborsMutableCollectionStandardStrategy.NotOrdered())
+@GraphNodeDSL
+fun <T> graphWithLeftToRightChildrenOf(initBlock: (NeighborsMutableCollectionStrategyA<Int, Graph<Int>>) -> Graph<T>): Graph<T> = initBlock(NeighborsMutableCollectionStandardStrategy.LeftToRightOrdered())
+@GraphNodeDSL
+fun <T> graphWithRightToLeftOrderedChildrenOf(initBlock: (NeighborsMutableCollectionStrategyA<Int, Graph<Int>>) -> Graph<T>): Graph<T> = initBlock(NeighborsMutableCollectionStandardStrategy.RightToLeftOrdered())

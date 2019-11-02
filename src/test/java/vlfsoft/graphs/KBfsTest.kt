@@ -8,16 +8,21 @@ import org.junit.jupiter.api.Test
  */
 class KBfsTest {
 
-    enum class PrintSearchTitle {
-        NotOrdered,
-        LeftToRightOrdered,
-        RightToLeftOrdered
+    private fun <T, TNode : GraphNode<T, TNode>> print_find_usingBFS(searchValue: T, hasBreadthFirstSearch: HasBreadthFirstSearchA<T, TNode>) {
+        with(hasBreadthFirstSearch) {
+            println("--${strategyName}--")
+            find_usingBFS(searchValue)
+            println()
+        }
     }
 
-    private inline fun printSearch(title: PrintSearchTitle, block: () -> Unit) {
-        println("--${title.name}--")
-        block()
+    private fun <T, TNode : GraphNode<T, TNode>> print_find_usingBFS(title: String, searchValue: T, vararg elements: HasBreadthFirstSearchA<T, TNode>) {
+        println("< $title >")
         println()
+
+        sequenceOf(*elements).forEach {
+            print_find_usingBFS(searchValue, it)
+        }
     }
 
     /**
@@ -28,27 +33,20 @@ class KBfsTest {
     @Test
     fun find_usingBFS_tree_baeldung() {
 
-        val initBlock: Tree<Int>.() -> Unit = {
+        fun Tree<Int>.populateTree() {
             addChild(2) {
                 addChild(3)
             }
             addChild(4)
         }
 
-        println("Tree")
-        println()
+        val rootValue = 10
+        print_find_usingBFS("Tree", 4,
+                treeWithNotOrderedChildrenOf(rootValue, Tree<Int>::populateTree),
+                treeWithLeftToRightOrderedChildrenOf(rootValue, Tree<Int>::populateTree),
+                treeRightToLeftOrderedChildrenOf(rootValue, Tree<Int>::populateTree)
+        )
 
-        printSearch(PrintSearchTitle.NotOrdered) {
-            treeWithNotOrderedChildrenOf(10) { initBlock() }.find_usingBFS(4)
-        }
-
-        printSearch(PrintSearchTitle.LeftToRightOrdered) {
-            treeWithLeftToRightOrderedChildrenOf(10) { initBlock() }.find_usingBFS(4)
-        }
-
-        printSearch(PrintSearchTitle.RightToLeftOrdered) {
-            treeRightToLeftOrderedChildrenOf(10) { initBlock() }.find_usingBFS(4)
-        }
     }
 
     @Test
@@ -71,20 +69,11 @@ class KBfsTest {
 
         }
 
-        println("Graph")
-        println()
-
-        printSearch(PrintSearchTitle.NotOrdered) {
-            populateGraph(NeighborsMutableCollectionStandardStrategy.NotOrdered()).find_usingBFS(4)
-        }
-
-        printSearch(PrintSearchTitle.LeftToRightOrdered) {
-            populateGraph(NeighborsMutableCollectionStandardStrategy.LeftToRightOrdered()).find_usingBFS(4)
-        }
-
-        printSearch(PrintSearchTitle.RightToLeftOrdered) {
-            populateGraph(NeighborsMutableCollectionStandardStrategy.RightToLeftOrdered()).find_usingBFS(4)
-        }
+        print_find_usingBFS("Graph", 4,
+                graphWithNotOrderedChildrenOf(::populateGraph),
+                graphWithLeftToRightChildrenOf(::populateGraph),
+                graphWithRightToLeftOrderedChildrenOf(::populateGraph)
+        )
 
     }
 
